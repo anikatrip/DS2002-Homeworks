@@ -1,0 +1,179 @@
+import sqlite3
+connection = sqlite3.connect('student_grades.db')
+cursor = connection.cursor()
+cursor.execute('''
+create table if not exists students(
+    student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL
+)''')
+cursor.close()
+cursor = connection.cursor()
+cursor.execute('''
+  create table if not exists grades(
+    grade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    subject TEXT NOT NULL,
+    grade INTEGER NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+  )''')
+
+cursor.close()
+cursor = connection.cursor()
+students_data = [
+    ('Anika', 'Thomas'),
+    ('Olivia', 'Andrews'),
+    ('Sophia', 'Smith'),
+    ('Izzy', 'Combs'),
+    ('Diane', 'Garcia')
+]
+
+cursor.executemany('''
+INSERT INTO students (first_name,last_name) VALUES (?, ?)
+''', students_data)
+
+# Commit the transaction
+connection.commit()
+grades_data = [
+    (1, 'Math', 85),
+    (1, 'English', 77),
+    (1, 'History', 99),
+    (2, 'Math', 75),
+    (2, 'English', 88),
+    (2, 'History', 95),
+    (3, 'Math', 73),
+    (3, 'English', 86),
+    (3, 'History', 97),
+    (4, 'Math', 89),
+    (4, 'English', 99),
+    (4, 'History', 77),
+    (5, 'Math', 98),
+    (5, 'English', 95),
+    (5, 'History', 73)
+]
+
+cursor.executemany('''
+INSERT INTO grades (student_id, subject, grade) VALUES (?, ?, ?)
+''', grades_data)
+# Commit the transaction
+connection.commit()
+cursor.execute('''
+SELECT first_name, last_name, GROUP_CONCAT(grade) from students 
+join grades on students.student_id = grades.student_id
+group by students.student_id
+''')
+cursor.fetchall()
+cursor.execute('''
+SELECT first_name, last_name, avg(grade) from students 
+join grades on students.student_id = grades.student_id
+group by students.student_id
+''')
+cursor.fetchall()
+cursor.execute('''
+SELECT first_name, last_name, avg(grade) as average_grade from students 
+join grades on students.student_id = grades.student_id
+group by students.student_id
+order by average_grade desc
+limit 1
+''')
+cursor.fetchall()
+cursor.execute('''
+SELECT avg(grade) from grades where subject = 'Math'
+''')
+cursor.fetchall()
+cursor.execute('''
+SELECT distinct first_name, last_name from students
+join grades on students.student_id = grades.student_id
+where grade < 90
+''')
+cursor.fetchall()
+import pandas as pd
+df1 = pd.read_sql_query('SELECT * FROM students', connection)
+df1.head()
+import pandas as pd
+df2 = pd.read_sql_query('SELECT * FROM grades', connection)
+df2.head(50)
+cursor.execute('''
+SELECT first_name, last_name, subject, grade from students
+JOIN grades ON students.student_id = grades.student_id
+''')
+joined_data = cursor.fetchall()
+df3 = pd.DataFrame(joined_data, columns=['first_name', 'last_name', 'subject', 'grade'])
+df3.head(15)
+cursor.execute('''
+select first_name, last_name, avg(grade) as average_grade from students
+join grades on students.student_id = grades.student_id
+group by students.student_id
+''')
+average_grades = cursor.fetchall()
+df4 = pd.DataFrame(average_grades, columns=['first_name', 'last_name', 'average_grade'])
+df4.head()
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10,6))
+plt.bar(df4['first_name'], df4['average_grade'])
+plt.xlabel('Student First Name')
+plt.ylabel('Average Grade')
+plt.title('Average Grades of Students')
+plt.show()
+cursor.execute('''
+select subject, avg(grade) as average_grade_subject from grades group by subject
+''')
+average_grade_subject = cursor.fetchall()
+df5 = pd.DataFrame(average_grade_subject, columns=['subject', 'average_grade_subject'])
+df5.head(10)
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10,6))
+plt.bar(df5['subject'], df5['average_grade_subject'])
+plt.xlabel('Subject')
+plt.ylabel('Average Grade')
+plt.title('Average Grade Per Subject')
+plt.show()
+cursor.execute('''
+select subject, max(grade), first_name, last_name from grades 
+join students on students.student_id = grades.student_id
+group by subject''')
+highest_grade_subject = cursor.fetchall()
+df6 = pd.DataFrame(highest_grade_subject, columns=['subject', 'highest_grade', 'first_name', 'last_name'])
+df6.head()
+cursor.execute('''
+SELECT first_name, last_name, subject, grade from students
+join grades on students.student_id = grades.student_id
+''')
+grades_with_names = cursor.fetchall()
+df7 = pd.DataFrame(grades_with_names, columns=['first_name', 'last_name', 'subject', 'grade'])
+df7.head(50)
+import matplotlib.pyplot as plt
+import pandas as pd
+
+df7['name'] = df7['first_name'] + ' ' + df7['last_name']
+
+subjects = df7['subject'].unique()
+bar_width = 0.2
+names = df7['name'].unique()
+x_positions = range(len(names))
+plt.figure(figsize=(10,6))
+for i, subject in enumerate(subjects):
+    subject_data = df7[df7['subject'] == subject]
+    
+names = df7['name'].unique()
+x_positions = range(len(names))
+fig, ax = plt.subplots(figsize=(10, 6))
+
+for i, subject in enumerate(subjects):
+    subject_data = df7[df7['subject'] == subject]
+
+    bars = ax.bar([x + i * bar_width for x in x_positions], subject_data['grade'], width=bar_width)
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, height, subject, ha='center', va='bottom', fontsize=8)
+ax.set_xticks([x + bar_width * (len(subjects) - 1) / 2 for x in x_positions])
+ax.set_xticklabels(names)
+
+ax.set_xlabel('Students')
+ax.set_ylabel('Grades')
+ax.set_title('Grades by Subject and Student')
+plt.tight_layout()
+plt.show()
+#for the grouped barchart I used ChatGPT to get the code for formatting and getting the labels for the individual bars and iterating through the subject because I did not know how to get the grouping of the scores by subject and person
+#I referenced the code it gave me and altered it to fit my data tables and so I could understand it. I also asked chat what each component that I have not used yet did. 
+#colab_notebook_link: https://colab.research.google.com/drive/1WShbUGfRuMZBUI0uSHLqjxYmEKehQCxi#scrollTo=_D-dvEEtvnS-
